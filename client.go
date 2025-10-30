@@ -20,23 +20,28 @@ enviados que modificam o estado do servidor:
 ▪ Cada comando pode incluir um sequenceNumber.
 ▪ O servidor deve manter o controle de comandos processados por
 cliente para evitar reexecução em caso de retransmissão.
-
 */
 package main
 
-import(
+import (
 	"fmt"
 	"net/rpc"
 	"os"
+	"time"
 )
 
+//STRUCT DA SESSAO
+//para adicionar como parametro no metodo que faz o polling
+type Session struct{}
+
+//VARIAVEIS MOCK PARA O METODO DE POLLING
+var sessao Session
+var sessaoString string = ""
 
 //main exemplo
 //deve reconsilhar com a main rpc para interagir com o servidor
 func main(){
-	/*
-	
-	*/
+	stop := make(chan struct{})
 
 	//conecta ao servidor rpc
 	client, err := rpc.Dial("tcp", "localhost:1234")
@@ -75,6 +80,31 @@ func main(){
 		interfaceDesenharJogo(&jogo)
 	}
 
+	//FUNCAO DE ATUALIZACAO DA SECAO - implementacao da atualizacao periodica da sessao
+	//pensei em deixar anonima por causa de algumas variaveis que só existem dentro da main
+	go func(intervalo time.Duration, stop <-chan struct{}){
+	
+	//timer de polling
+	ticker := time.NewTicker(intervalo)
+		defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err = client.Call("Arith.pegaSessao", sessao, &sessaoString)
+		if err != nil{
+		fmt.Println("Erro na chamada pdc:", err)
+		return
+	}
+
+	fmt.Println("Resultado do metodo: ", sessaoString)
+	
+		case <-stop:
+			fmt.Println("⏹ polling encerrado")
+			return
+		}
+	}
+	}(500*time.Millisecond,stop)
 
 	//chama os metodos remotos
 	/*

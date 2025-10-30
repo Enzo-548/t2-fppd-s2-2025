@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"time"
 )
 
 //STRUCT DA SEÇÃO QUE O SERVIDOR IRA ARMAZENAR
@@ -88,6 +89,7 @@ func (a *Arith) atualizaSessao(sessionsCliente *Session, reply *string) error{
 //tambem levar em consideracao o reply deste metodo, p metodo acima poderia retornar a sessao do cliente ja atualizada
 func (a *Arith) pegaSessao(sessaoCliente *Session, reply *string) error{
 	//TODO
+	fmt.Println("buscando atualizações do servidor em", time.Now().Format("15:04:05.000"))
 	*&sessaoCliente = &sessaoServ
 	return nil
 }
