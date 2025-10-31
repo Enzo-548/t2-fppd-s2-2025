@@ -40,6 +40,7 @@ var sessaoString string = ""
 
 //main exemplo
 //deve reconsilhar com a main rpc para interagir com o servidor
+//modificar o addr, o ip na hora de rodar o trabalho com o prof
 func main(){
 	stop := make(chan struct{})
 

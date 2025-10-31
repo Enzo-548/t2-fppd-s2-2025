@@ -28,9 +28,10 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"time"
-	"log"
 )
 
 //STRUCT PARA TRANSPORTE DE MENSAGEM, mais versatil que um canal
@@ -60,18 +61,17 @@ func NewServer(listenAddr string) *Server{
 }
 
 //Init de server
-func (a *Server) Start () error{
-	ln,err := net.Listen("tcp", a.listenAddr)
+func (a *Server) Start() error{
+	ln, err := net.Listen("tcp", a.listenAddr)
 	if err != nil{
 	return err
 	}
 	defer ln.Close()	
-
 	a.ln = ln
 	
-	go  a.acceptLoop()
+	go a.acceptLoop()
 
-	<- a.quitch
+	<-a.quitch
 	close(a.msgch)
 
 	return nil
@@ -94,22 +94,25 @@ func (a *Server) acceptLoop(){
 
 //Leitura de mensagem
 func (a *Server) readLoop(conn net.Conn){
+	defer conn.Close()
 	for{
-		buf := make([]byte, 2048)
+	buf := make([]byte, 4096)
+
 		n,err := conn.Read(buf)
 		if err != nil{
 		fmt.Println("read error: ", err)
+			if err == io.EOF{
+				break
+			}
 		continue
 		}
-	
 		a.msgch <- Message{
-			from: conn.RemoteAddr().String(),
+			from:	 conn.RemoteAddr().String(),
 			payload: buf[:n],
 		}
-		
-	conn.Write([]byte("thank you for your message!"))
 
-	}
+		conn.Write([]byte("thank you for your message!"))
+	}			
 }
 
 //STRUCT DA SEÇÃO QUE O SERVIDOR IRA ARMAZENAR
@@ -186,7 +189,7 @@ func main(){
 
 	go func(){
 	for msg := range server.msgch{
-		fmt.Println("received message from connection: ", msg.from, string(msg.payload))
+		fmt.Printf("received message from connection(%s):%s\n", msg.from, string(msg.payload))
 		}
 	}()
 
