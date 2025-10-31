@@ -36,8 +36,7 @@ type Session struct{}
 
 //VARIAVEIS MOCK PARA O METODO DE POLLING
 var sessao Session
-var sessaoString string = ""
-
+var serverAddr string = ":3000"
 //main exemplo
 //deve reconsilhar com a main rpc para interagir com o servidor
 //modificar o addr, o ip na hora de rodar o trabalho com o prof
@@ -45,7 +44,7 @@ func main(){
 	stop := make(chan struct{})
 
 	//conecta ao servidor rpc
-	client, err := rpc.Dial("tcp", "localhost:1234")
+	client, err := rpc.Dial("tcp", serverAddr)
 	if err != nil{
 		fmt.Println("Erro ao conectar ao servidor", err)
 		return
@@ -93,13 +92,13 @@ func main(){
 	for {
 		select {
 		case <-ticker.C:
-			err = client.Call("Arith.pegaSessao", sessao, &sessaoString)
+			err = client.Call("ClientMet.PegaSessao", sessao, nil)
 		if err != nil{
 		fmt.Println("Erro na chamada pdc:", err)
 		return
 	}
 
-	fmt.Println("Resultado do metodo: ", sessaoString)
+	//fmt.Println("Resultado do metodo: ", sessaoString)
 	
 		case <-stop:
 			fmt.Println("⏹ polling encerrado")

@@ -34,11 +34,19 @@ import (
 	"time"
 )
 
+//CONTEUDO DA MENSAGEM
+//-- ALTERAR A CADA ATRIBUTO ADICIONADO
+//digamos que eu quero adicionar outro atributo pra mandar pro servidor por exemplo
+type Payload struct{
+	minhaPos PosJogador
+}
+
 //STRUCT PARA TRANSPORTE DE MENSAGEM, mais versatil que um canal
 //DE ONDE QUE VEIO A MENSAGEM E O CONTEUDO DA MENSAGEM(info da sessao)
 type Message struct{
 	from string
 	payload []byte
+	//payload Payload
 }
 
 //STRUCT DE DEF Do SERVIDOR
@@ -96,7 +104,8 @@ func (a *Server) acceptLoop(){
 func (a *Server) readLoop(conn net.Conn){
 	defer conn.Close()
 	for{
-	buf := make([]byte, 4096)
+	//ALTERAR AQUI PARA A LEITURA DA MENSAGEM
+	buf := make([]byte, 2048)
 
 		n,err := conn.Read(buf)
 		if err != nil{
@@ -115,27 +124,25 @@ func (a *Server) readLoop(conn net.Conn){
 	}			
 }
 
+type PosJogador struct{
+	posX int;
+	posY int;
+}
+
 //STRUCT DA SEÇÃO QUE O SERVIDOR IRA ARMAZENAR
 //A IDEIA E ARMAZENAR TODAS AS INFORMAÇÕES RELEVANTES A SECAO NESSA STRUCT E
 //ATUALIZAR A SECAO COM AS REQUISICOES
 type Session struct{
-	pos []int
-	/*
-	req1
-	req2
-	...
-	*/
+	listPosJogador []PosJogador
+	//Informações relevantes
 }
 
 //STRUCTS DAS REQUISICOES QUE O SERVIDOR IRA LIDAR
 //CORPO DAS REQUISICOES QUE O CLIENTE IRA PEDIR
 //ex: minha posicao!, meu mapa!, onde estão os outros players?, etc.
 type Requisition struct{
-	/*
-	req1
-	req2
-	...
-	*/
+	listPosJogadores []PosJogador
+	//+informações relevantes
 }
 
 //numero maximo de jogadores (alteravel)
@@ -170,7 +177,7 @@ func (a *ClientMet) AtualizaSessao(sessionsCliente *Session, reply *string) erro
 //o pointer que ele recebe e para atualizar a sessao no cliente
 //pode e deve ser alterado para outro tipo pois o cliente nao vai armazenar a sessao inteira
 //tambem levar em consideracao o reply deste metodo, p metodo acima poderia retornar a sessao do cliente ja atualizada
-func (a *ClientMet) PegaSessao(sessaoCliente *Session, reply *string) error{
+func (a *ClientMet) PegaSessao(sessaoCliente *Session) error{
 	//TODO
 	fmt.Println("buscando atualizações do servidor em", time.Now().Format("15:04:05.000"))
 	return nil
