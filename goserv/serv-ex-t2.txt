@@ -1,0 +1,93 @@
+//source: How To Build A Custom TCP Server In Golang!? - AnthonyGG
+//https://www.youtube.com/watch?v=qJQrrscB1-4
+//modelo muito bom para construir em cima o servidor, queria ver como se faz pra conectar a partir de outros computadores
+
+
+package main
+
+import (
+	"fmt"
+	"net"
+	"log"
+	)
+
+type Message struct{
+	from string
+	payload byte[]
+}
+
+type Server struct{
+	listenAdrr string
+	ln net.Listener
+	quitch chan struct{}
+	msgch chan Message
+	//peerMap [netAddr] rastreamentode conexões
+}
+
+func NewServer(listenAddr string) *Server{
+	return &Server{
+	listenAddr: listenAddr,
+	quitch: make(chan struct{}),
+	msgch: make(chan Message, 10)
+	}
+}
+
+func (a *Server) Start () error{
+	ln,err := net.Listen("tcp", s.listenAddr)
+	if err != nil{
+	return err
+	}
+	defer ln.Close()	
+
+	s.ln = ln
+	
+	go  s.acceptLoop()
+
+	<- quitch
+	close(s.msgch)
+
+	return nil
+}
+
+func (a *Server) acceptLoop(){
+	for{
+	conn, err := s.ln.Accept()
+	if err != nil{
+		fmt.Println("accept error: ", err)
+		continue
+		}
+	}
+
+	fmt.Println("new connection to the server accepted: ", conn.remoteAddr())
+	go s.readLoop(conn)
+}
+
+func (a *Server) readLoop(conn net.Conn){
+	for{
+		buf := make(bytes[], 2048)
+		n,err := conn.Read(buf)
+		if err != nil{
+		fmt.Println("read error: ", err)
+		continue
+		}
+	
+		s.msgch <- Message{
+			from: conn.RemoteAddr().String,
+			payload: buf[:n],
+		}
+		
+	conn.Write(byte[]("thank you for your message!"))
+
+	}
+	
+	
+}
+func main(){
+	server := newServer(":3000")
+	go(){
+	for msg := range server.msgch{
+		fmt.Println("received message from connection: ", msg.from, string(msg.payload))
+		}
+	}
+	log.Fatal(server.Start())
+}
