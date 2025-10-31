@@ -29,9 +29,88 @@ package main
 import (
 	"fmt"
 	"net"
-	"net/rpc"
 	"time"
+	"log"
 )
+
+//STRUCT PARA TRANSPORTE DE MENSAGEM, mais versatil que um canal
+//DE ONDE QUE VEIO A MENSAGEM E O CONTEUDO DA MENSAGEM(info da sessao)
+type Message struct{
+	from string
+	payload []byte
+}
+
+//STRUCT DE DEF Do SERVIDOR
+type Server struct{
+	listenAddr string
+	ln net.Listener
+	//canal para desconectar do servidor
+	quitch chan struct{}
+	msgch chan Message
+	//peerMap [netAddr] rastreamentode conexões
+}
+
+//Criacao de server
+func NewServer(listenAddr string) *Server{
+	return &Server{
+	listenAddr: listenAddr,
+	quitch: make(chan struct{}),
+	msgch: make(chan Message, 10),
+	}
+}
+
+//Init de server
+func (a *Server) Start () error{
+	ln,err := net.Listen("tcp", a.listenAddr)
+	if err != nil{
+	return err
+	}
+	defer ln.Close()	
+
+	a.ln = ln
+	
+	go  a.acceptLoop()
+
+	<- a.quitch
+	close(a.msgch)
+
+	return nil
+}
+
+//Ciclo de aceitacao de conexão
+func (a *Server) acceptLoop(){
+	for{
+	conn, err := a.ln.Accept()
+	if err != nil{
+		fmt.Println("accept error: ", err)
+		continue
+		}
+
+	fmt.Println("new connection to the server accepted: ", conn.RemoteAddr())
+	
+	go a.readLoop(conn)
+	}
+}
+
+//Leitura de mensagem
+func (a *Server) readLoop(conn net.Conn){
+	for{
+		buf := make([]byte, 2048)
+		n,err := conn.Read(buf)
+		if err != nil{
+		fmt.Println("read error: ", err)
+		continue
+		}
+	
+		a.msgch <- Message{
+			from: conn.RemoteAddr().String(),
+			payload: buf[:n],
+		}
+		
+	conn.Write([]byte("thank you for your message!"))
+
+	}
+}
 
 //STRUCT DA SEÇÃO QUE O SERVIDOR IRA ARMAZENAR
 //A IDEIA E ARMAZENAR TODAS AS INFORMAÇÕES RELEVANTES A SECAO NESSA STRUCT E
@@ -46,9 +125,9 @@ type Session struct{
 }
 
 //STRUCTS DAS REQUISICOES QUE O SERVIDOR IRA LIDAR
-//a ideia nao e clara, eu tava pensando de usar um struct assim pra rastrear as
-//requisicoes para atualizar o struct session
-type Requisitions struct{
+//CORPO DAS REQUISICOES QUE O CLIENTE IRA PEDIR
+//ex: minha posicao!, meu mapa!, onde estão os outros players?, etc.
+type Requisition struct{
 	/*
 	req1
 	req2
@@ -65,10 +144,12 @@ var sessaoServ Session
 //vetor de requisicoes;
 //e possivel manter a rastreabilidade de todas as requisições baseadas
 //no limite de jogadores max da sessao
-var requisitionsServ [n]Requisitions
+var requisitionsServ [n]Requisition
 
-//metodos exportados
-type Arith struct{}
+//metodos exportados usados pelo cliente
+//a logica vai ser implementada em servidor
+//ex: quero atualizar a minha secao!
+type ClientMet struct{}
 
 //ATUALIZA A SECAO DO JOGO
 //importante para atualizar a sessao do servidor
@@ -76,9 +157,8 @@ type Arith struct{}
 //e dois parametros, o parametro para providenciado pelo caller(cliente) e o parametro de reply(servidor)
 //neste caso ele ta mandandando a secao do cliente que vai ser usada para atualizar o servidor e
 //o reply seria uma mensagem de string?(a ser definido)
-func (a *Arith) atualizaSessao(sessionsCliente *Session, reply *string) error{
+func (a *ClientMet) AtualizaSessao(sessionsCliente *Session, reply *string) error{
 	//TODO
-	*&sessaoServ = *sessionsCliente
 	return nil
 }
 
@@ -87,36 +167,28 @@ func (a *Arith) atualizaSessao(sessionsCliente *Session, reply *string) error{
 //o pointer que ele recebe e para atualizar a sessao no cliente
 //pode e deve ser alterado para outro tipo pois o cliente nao vai armazenar a sessao inteira
 //tambem levar em consideracao o reply deste metodo, p metodo acima poderia retornar a sessao do cliente ja atualizada
-func (a *Arith) pegaSessao(sessaoCliente *Session, reply *string) error{
+func (a *ClientMet) PegaSessao(sessaoCliente *Session, reply *string) error{
 	//TODO
 	fmt.Println("buscando atualizações do servidor em", time.Now().Format("15:04:05.000"))
-	*&sessaoCliente = &sessaoServ
 	return nil
 }
 
 //ideia
 //FUNCAO PARA LIDAR COM CONFLITOS DE REQUISICOES(tipo conflito de posicao de jogadores)
-func (a *Arith) sessaoException(){
+func (a *ClientMet) SessaoException(){
 
 }
 
 
 //Main exemplo
 func main(){
-	arith := new(Arith)
-	err := rpc.Register(arith)
-	if err != nil{
-		fmt.Println("Erro ao registrar o serviço", err)
-		return
-	}
-	//escuta na porta TCP 1234
-	listener, err := net.Listen("tcp", ":1234")
-	if err != nil{
-		fmt.Println("Erro ao escutar:", err)
-		return
-	}
-	defer listener.Close()
+	server := NewServer(":3000")
 
-	fmt.Println("Servidor RPC esperando chamadas na porta 1234...")
-	rpc.Accept(listener)
+	go func(){
+	for msg := range server.msgch{
+		fmt.Println("received message from connection: ", msg.from, string(msg.payload))
+		}
+	}()
+
+	log.Fatal(server.Start())
 }

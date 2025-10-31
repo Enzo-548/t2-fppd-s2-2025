@@ -64,7 +64,8 @@ func main(){
 
 	// Inicializa o jogo
 	jogo := jogoNovo()
-	if err := jogoCarregarMapa(mapaFile, &jogo); err != nil {
+	if err := jogoCarregarMapa(mapaFile, &jogo); 
+	err != nil {
 		panic(err)
 	}
 
@@ -107,12 +108,5 @@ func main(){
 	}(500*time.Millisecond,stop)
 
 	//chama os metodos remotos
-	/*
-	err = client.Call("Arith.Multiply", args, &result)
-	if err != nil{
-		fmt.Println("Erro na chamada pdc:", err)
-		return
-	}
-	fmt.Println("Resultado da multiplicação: ", result)
-	*/
+	//TODO
 }
